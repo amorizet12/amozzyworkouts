@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format, formatISO, isToday, parseISO } from "date-fns";
-import { Plus, X } from "lucide-react";
+import { CalendarClock, Plus, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Exercise, MuscleGroupId } from "@/lib/types";
 import { MUSCLE_GROUPS, muscleGroupColor, muscleGroupLabel } from "@/lib/muscleGroups";
@@ -19,9 +19,11 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
   const activePlanId = useStore((s) => s.activePlanId);
   const plans = useStore((s) => s.plans);
   const weightUnit = useStore((s) => s.weightUnit);
+  const pushDay = useStore((s) => s.pushDay);
 
   const activePlan = plans.find((p) => p.id === activePlanId) ?? null;
   const scheduled = activePlan?.schedule[dateISO];
+  const isTodayView = isToday(parseISO(dateISO));
 
   const scheduledExerciseIds = useMemo(
     () => new Set(scheduled?.exercises.map((e) => e.exerciseId) ?? []),
@@ -51,7 +53,7 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
   const extraExerciseIds = Array.from(new Set([...loggedExtraIds, ...manualExtraIds]));
   const extraExercises = exercises.filter((e) => extraExerciseIds.includes(e.id));
 
-  const dateLabel = isToday(parseISO(dateISO))
+  const dateLabel = isTodayView
     ? `Today · ${format(parseISO(dateISO), "EEEE, MMM d")}`
     : format(parseISO(dateISO), "EEEE, MMMM d");
 
@@ -76,6 +78,16 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
           </div>
         )}
       </div>
+
+      {isTodayView && scheduled && activePlanId && (
+        <button
+          onClick={() => pushDay(activePlanId, dateISO)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-base-700 py-2 text-[12.5px] font-medium text-base-400 hover:border-accent-400/40 hover:text-accent-400"
+        >
+          <CalendarClock size={14} />
+          Push today — I can't work out, use a rest day instead
+        </button>
+      )}
 
       {!activePlan && (
         <EmptyState message="No active plan yet. Head to Settings → Workout Plan to build one." />

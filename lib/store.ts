@@ -2,17 +2,19 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { addDays, differenceInCalendarDays, formatISO, parseISO } from "date-fns";
 import {
   AppData,
+  DaySlot,
   Exercise,
   LoggedSet,
   MuscleGroupId,
   Plan,
-  PlanTarget,
+  SplitStyle,
   UserProfile,
 } from "./types";
 import { buildDefaultExercises } from "./muscleGroups";
-import { buildScheduleFromTemplate, buildWeeklyTemplate, generateSchedule } from "./schedule";
+import { buildScheduleFromDaySequence, materializeDaySequence, pushDayInSequence } from "./schedule";
 import { makeId } from "./id";
 
 interface StoreState extends AppData {
@@ -24,17 +26,20 @@ interface StoreState extends AppData {
     name: string;
     startDate: string;
     durationWeeks: number;
-    targets: PlanTarget[];
+    splitStyle: SplitStyle;
+    restDaysPerCycle: number;
+    baseCycle: DaySlot[];
   }) => void;
   deletePlan: (id: string) => void;
   setActivePlan: (id: string | null) => void;
-  swapPlanExercise: (
+  swapDayExercise: (
     planId: string,
-    dayOfWeek: number,
+    dateISO: string,
     muscleGroup: MuscleGroupId,
     oldExerciseId: string,
     newExerciseId: string
   ) => void;
+  pushDay: (planId: string, dateISO: string) => void;
   logSet: (date: string, exerciseId: string, weight: number, reps: number, rpe?: number) => void;
   deleteSet: (date: string, setId: string) => void;
   setWeightUnit: (unit: "lbs" | "kg") => void;
@@ -53,6 +58,68 @@ const emptyProfile: UserProfile = {
   heightIn: null,
   activityLevel: null,
 };
+
+/** Upgrades any legacy plan shape (weekly-template era, or older) into the
+ * current day-sequence shape. Falls back to a blank plan rather than crash
+ * if the shape is unrecognized. */
+function normalizePlan(raw: any): Plan {
+  if (Array.isArray(raw.daySequence)) {
+    return {
+      id: raw.id,
+      name: raw.name,
+      startDate: raw.startDate,
+      durationWeeks: raw.durationWeeks ?? Math.ceil(raw.daySequence.length / 7),
+      splitStyle: raw.splitStyle ?? "custom",
+      restDaysPerCycle: raw.restDaysPerCycle ?? 0,
+      daySequence: raw.daySequence,
+      schedule: buildScheduleFromDaySequence(raw.daySequence, raw.startDate),
+      createdAt: raw.createdAt ?? new Date().toISOString(),
+    };
+  }
+
+  const durationWeeks = raw.durationWeeks ?? 8;
+  const totalDays = durationWeeks * 7;
+
+  if (raw.weeklyTemplate) {
+    const start = parseISO(raw.startDate);
+    const daySequence: DaySlot[] = [];
+    for (let i = 0; i < totalDays; i++) {
+      const dow = addDays(start, i).getDay();
+      const entries = raw.weeklyTemplate[dow] ?? [];
+      daySequence.push(
+        entries.map((e: any) => ({
+          muscleGroup: e.muscleGroup,
+          exerciseIds: e.exerciseIds,
+          setsPerExercise: e.setsPerExercise ?? 3,
+        }))
+      );
+    }
+    return {
+      id: raw.id,
+      name: raw.name,
+      startDate: raw.startDate,
+      durationWeeks,
+      splitStyle: "custom",
+      restDaysPerCycle: 0,
+      daySequence,
+      schedule: buildScheduleFromDaySequence(daySequence, raw.startDate),
+      createdAt: raw.createdAt ?? new Date().toISOString(),
+    };
+  }
+
+  const daySequence = Array.from({ length: totalDays }, () => [] as DaySlot);
+  return {
+    id: raw.id ?? makeId("plan"),
+    name: raw.name ?? "Untitled Plan",
+    startDate: raw.startDate ?? formatISO(new Date(), { representation: "date" }),
+    durationWeeks,
+    splitStyle: "custom",
+    restDaysPerCycle: 0,
+    daySequence,
+    schedule: {},
+    createdAt: raw.createdAt ?? new Date().toISOString(),
+  };
+}
 
 export const useStore = create<StoreState>()(
   persist(
@@ -88,24 +155,30 @@ export const useStore = create<StoreState>()(
           exercises: state.exercises.filter((e) => e.id !== id),
           plans: state.plans.map((p) => ({
             ...p,
-            targets: p.targets.map((t) => ({
-              ...t,
-              exerciseIds: t.exerciseIds.filter((eid) => eid !== id),
-            })),
+            daySequence: p.daySequence.map((slot) =>
+              slot
+                .map((entry) => ({
+                  ...entry,
+                  exerciseIds: entry.exerciseIds.filter((eid) => eid !== id),
+                }))
+                .filter((entry) => entry.exerciseIds.length > 0)
+            ),
           })),
         }));
       },
 
-      createPlan: ({ name, startDate, durationWeeks, targets }) => {
+      createPlan: ({ name, startDate, durationWeeks, splitStyle, restDaysPerCycle, baseCycle }) => {
         const weeks = Math.min(Math.max(1, durationWeeks), CURRENT_PLAN_WEEKS_CAP);
-        const { weeklyTemplate, schedule } = generateSchedule(targets, startDate, weeks);
+        const daySequence = materializeDaySequence(baseCycle, weeks * 7);
+        const schedule = buildScheduleFromDaySequence(daySequence, startDate);
         const plan: Plan = {
           id: makeId("plan"),
           name: name.trim() || "Untitled Plan",
           startDate,
           durationWeeks: weeks,
-          targets,
-          weeklyTemplate,
+          splitStyle,
+          restDaysPerCycle,
+          daySequence,
           schedule,
           createdAt: new Date().toISOString(),
         };
@@ -124,27 +197,48 @@ export const useStore = create<StoreState>()(
 
       setActivePlan: (id) => set({ activePlanId: id }),
 
-      swapPlanExercise: (planId, dayOfWeek, muscleGroup, oldExerciseId, newExerciseId) => {
+      swapDayExercise: (planId, dateISO, muscleGroup, oldExerciseId, newExerciseId) => {
         set((state) => ({
           plans: state.plans.map((p) => {
             if (p.id !== planId) return p;
 
-            const dayEntries = p.weeklyTemplate[dayOfWeek] ?? [];
-            const updatedDayEntries = dayEntries.map((entry) => {
-              if (entry.muscleGroup !== muscleGroup) return entry;
-              if (entry.exerciseIds.includes(newExerciseId)) return entry;
-              return {
-                ...entry,
-                exerciseIds: entry.exerciseIds.map((id) =>
-                  id === oldExerciseId ? newExerciseId : id
-                ),
-              };
+            const index = differenceInCalendarDays(parseISO(dateISO), parseISO(p.startDate));
+            if (index < 0 || index >= p.daySequence.length) return p;
+
+            const daySequence = p.daySequence.map((slot, i) => {
+              if (i !== index) return slot;
+              return slot.map((entry) => {
+                if (entry.muscleGroup !== muscleGroup) return entry;
+                if (entry.exerciseIds.includes(newExerciseId)) return entry;
+                return {
+                  ...entry,
+                  exerciseIds: entry.exerciseIds.map((id) =>
+                    id === oldExerciseId ? newExerciseId : id
+                  ),
+                };
+              });
             });
 
-            const weeklyTemplate = { ...p.weeklyTemplate, [dayOfWeek]: updatedDayEntries };
-            const schedule = buildScheduleFromTemplate(weeklyTemplate, p.startDate, p.durationWeeks);
+            return { ...p, daySequence, schedule: buildScheduleFromDaySequence(daySequence, p.startDate) };
+          }),
+        }));
+      },
 
-            return { ...p, weeklyTemplate, schedule };
+      pushDay: (planId, dateISO) => {
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+
+            const index = differenceInCalendarDays(parseISO(dateISO), parseISO(p.startDate));
+            const daySequence = pushDayInSequence(p.daySequence, index);
+            const durationWeeks = Math.max(p.durationWeeks, Math.ceil(daySequence.length / 7));
+
+            return {
+              ...p,
+              daySequence,
+              durationWeeks,
+              schedule: buildScheduleFromDaySequence(daySequence, p.startDate),
+            };
           }),
         }));
       },
@@ -187,7 +281,7 @@ export const useStore = create<StoreState>()(
       exportData: () => {
         const { exercises, plans, activePlanId, logs, weightUnit, profile } = get();
         const payload = {
-          version: 2,
+          version: 3,
           exportedAt: new Date().toISOString(),
           data: { exercises, plans, activePlanId, logs, weightUnit, profile },
         };
@@ -201,14 +295,7 @@ export const useStore = create<StoreState>()(
           if (!data || !Array.isArray(data.exercises) || !Array.isArray(data.plans)) {
             return { ok: false, error: "This file doesn't look like an Amozzy Workouts backup." };
           }
-          const plans: Plan[] = data.plans.map((p: Plan) => ({
-            ...p,
-            targets: (p.targets ?? []).map((t: PlanTarget) => ({
-              ...t,
-              setsPerExercise: t.setsPerExercise ?? 3,
-            })),
-            weeklyTemplate: p.weeklyTemplate ?? buildWeeklyTemplate(p.targets ?? []),
-          }));
+          const plans: Plan[] = data.plans.map(normalizePlan);
           set({
             exercises: data.exercises,
             plans,
@@ -236,22 +323,12 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "amozzy-workouts-data",
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
         const state = persisted as Partial<StoreState> | undefined;
         if (!state) return state;
 
-        const plans = (state.plans ?? []).map((p) => {
-          const targets = (p.targets ?? []).map((t: PlanTarget) => ({
-            ...t,
-            setsPerExercise: t.setsPerExercise ?? 3,
-          }));
-          return {
-            ...p,
-            targets,
-            weeklyTemplate: p.weeklyTemplate ?? buildWeeklyTemplate(targets),
-          };
-        });
+        const plans = (state.plans ?? []).map(normalizePlan);
 
         return { ...state, plans, profile: state.profile ?? emptyProfile };
       },

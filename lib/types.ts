@@ -22,21 +22,16 @@ export interface Exercise {
   muscleGroup: MuscleGroupId;
 }
 
-export interface PlanTarget {
-  muscleGroup: MuscleGroupId;
-  timesPerWeek: number;
-  exerciseIds: string[];
-  setsPerExercise: number;
-}
-
-export interface WeeklyTemplateEntry {
+export interface DaySlotEntry {
   muscleGroup: MuscleGroupId;
   exerciseIds: string[];
   setsPerExercise: number;
 }
 
-// Sunday = 0 ... Saturday = 6, matching Date#getDay()
-export type WeeklyTemplate = Record<number, WeeklyTemplateEntry[]>;
+/** One day's plan: a list of muscle-group blocks, or an empty array for a rest day. */
+export type DaySlot = DaySlotEntry[];
+
+export type SplitStyle = "ppl" | "upper_lower" | "custom";
 
 export interface ScheduledExercise {
   exerciseId: string;
@@ -55,8 +50,13 @@ export interface Plan {
   name: string;
   startDate: string; // ISO yyyy-mm-dd
   durationWeeks: number;
-  targets: PlanTarget[];
-  weeklyTemplate: WeeklyTemplate;
+  splitStyle: SplitStyle;
+  restDaysPerCycle: number; // informational, only meaningful for ppl/upper_lower presets
+  /** The plan's day-by-day content, indexed by offset from startDate (0 = startDate).
+   * Built by repeating a base cycle continuously — it does NOT reset weekly.
+   * This is the editable source of truth: swapping an exercise or pushing a
+   * day mutates specific entries here directly. */
+  daySequence: DaySlot[];
   schedule: Record<string, ScheduledDay>;
   createdAt: string;
 }

@@ -1,20 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { addDays, format, formatISO, parseISO } from "date-fns";
 import { ArrowLeftRight, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Exercise, MuscleGroupId, Plan } from "@/lib/types";
 import { muscleGroupColor, muscleGroupLabel } from "@/lib/muscleGroups";
 
-const DAY_LABELS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+const PREVIEW_DAYS = 14;
 
 interface PlanWeekViewProps {
   plan: Plan;
@@ -23,18 +16,22 @@ interface PlanWeekViewProps {
 
 export default function PlanWeekView({ plan, exercises }: PlanWeekViewProps) {
   const [swapKey, setSwapKey] = useState<string | null>(null);
-  const swapPlanExercise = useStore((s) => s.swapPlanExercise);
+  const swapDayExercise = useStore((s) => s.swapDayExercise);
 
   const exerciseName = (id: string) => exercises.find((e) => e.id === id)?.name ?? "Unknown";
+  const start = parseISO(plan.startDate);
+  const daysToShow = Math.min(plan.daySequence.length, PREVIEW_DAYS);
 
   return (
     <div className="space-y-2">
-      {DAY_LABELS.map((label, day) => {
-        const entries = plan.weeklyTemplate?.[day] ?? [];
+      {Array.from({ length: daysToShow }, (_, day) => {
+        const entries = plan.daySequence[day] ?? [];
+        const date = addDays(start, day);
+        const dateISO = formatISO(date, { representation: "date" });
         return (
           <div key={day} className="rounded-lg border border-base-700/60 p-3">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-base-400">
-              {label}
+              {format(date, "EEEE, MMM d")}
             </p>
 
             {entries.length === 0 ? (
@@ -54,7 +51,7 @@ export default function PlanWeekView({ plan, exercises }: PlanWeekViewProps) {
                     </span>
                     <div className="mt-1.5 space-y-1">
                       {entry.exerciseIds.map((exId) => {
-                        const key = `${day}-${entry.muscleGroup}-${exId}`;
+                        const key = `${dateISO}-${entry.muscleGroup}-${exId}`;
                         const alternatives = exercises.filter(
                           (e) =>
                             e.muscleGroup === entry.muscleGroup &&
@@ -102,9 +99,9 @@ export default function PlanWeekView({ plan, exercises }: PlanWeekViewProps) {
                                       <button
                                         key={alt.id}
                                         onClick={() => {
-                                          swapPlanExercise(
+                                          swapDayExercise(
                                             plan.id,
-                                            day,
+                                            dateISO,
                                             entry.muscleGroup as MuscleGroupId,
                                             exId,
                                             alt.id
@@ -131,6 +128,12 @@ export default function PlanWeekView({ plan, exercises }: PlanWeekViewProps) {
           </div>
         );
       })}
+      {plan.daySequence.length > daysToShow && (
+        <p className="text-center text-[11.5px] text-base-500">
+          Showing the first {daysToShow} days · the pattern keeps repeating for the rest of the
+          plan
+        </p>
+      )}
     </div>
   );
 }

@@ -1,63 +1,61 @@
 import { addDays, formatISO, parseISO } from "date-fns";
-import { PlanTarget, ScheduledDay, WeeklyTemplate } from "./types";
+import { DaySlot, ScheduledDay } from "./types";
 
-/**
- * Spreads a muscle group's weekly sessions as evenly as possible across the
- * 7 days of the week, staggering the starting offset per target so that
- * different groups don't all land on day 0. Groups can and do share a day
- * (e.g. a "push" day of chest + shoulders + triceps) — that's normal.
- */
-function idealDayIndices(timesPerWeek: number, offset: number): number[] {
-  if (timesPerWeek <= 0) return [];
-  const days: number[] = [];
-  for (let k = 0; k < timesPerWeek; k++) {
-    const raw = Math.round((k * 7) / timesPerWeek) + offset;
-    days.push(((raw % 7) + 7) % 7);
+/** Spreads `count` items as evenly as possible across `total` slots (0-indexed). */
+export function evenlySpacedIndices(count: number, total: number): number[] {
+  if (count <= 0 || total <= 0) return [];
+  const indices: number[] = [];
+  for (let k = 0; k < count; k++) {
+    indices.push(Math.round((k * total) / count) % total);
   }
-  return Array.from(new Set(days));
+  return Array.from(new Set(indices));
 }
 
-/** Builds the recurring Sun-Sat pattern for a plan's targets. This is the
- * editable source of truth after creation — swapping an exercise mutates
- * this directly rather than the original targets. */
-export function buildWeeklyTemplate(targets: PlanTarget[]): WeeklyTemplate {
-  const activeTargets = targets.filter((t) => t.timesPerWeek > 0 && t.exerciseIds.length > 0);
+/** Builds one repeating cycle from an ordered list of workout-day slots plus
+ * a number of rest days, spacing the rest days evenly around the cycle. */
+export function buildCycleFromWorkoutDays(workoutDays: DaySlot[], restDaysPerCycle: number): DaySlot[] {
+  const cycleLength = workoutDays.length + Math.max(0, restDaysPerCycle);
+  if (cycleLength === 0) return [];
 
-  const template: WeeklyTemplate = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-
-  activeTargets.forEach((target, i) => {
-    const dayIndices = idealDayIndices(target.timesPerWeek, i);
-    dayIndices.forEach((d) => {
-      template[d].push({
-        muscleGroup: target.muscleGroup,
-        exerciseIds: [...target.exerciseIds],
-        setsPerExercise: target.setsPerExercise,
-      });
-    });
-  });
-
-  return template;
+  const restIndices = new Set(evenlySpacedIndices(restDaysPerCycle, cycleLength));
+  const cycle: DaySlot[] = [];
+  let workoutCursor = 0;
+  for (let i = 0; i < cycleLength; i++) {
+    if (restIndices.has(i)) {
+      cycle.push([]);
+    } else {
+      cycle.push(workoutDays[workoutCursor] ?? []);
+      workoutCursor++;
+    }
+  }
+  return cycle;
 }
 
-/** Expands a weekly template into concrete calendar dates for the plan's duration. */
-export function buildScheduleFromTemplate(
-  template: WeeklyTemplate,
-  startDateISO: string,
-  durationWeeks: number
+/** Repeats a base cycle until it reaches (at least) totalDays, then trims to length. */
+export function materializeDaySequence(baseCycle: DaySlot[], totalDays: number): DaySlot[] {
+  if (baseCycle.length === 0) return Array.from({ length: totalDays }, () => []);
+  const sequence: DaySlot[] = [];
+  for (let i = 0; i < totalDays; i++) {
+    sequence.push(baseCycle[i % baseCycle.length]);
+  }
+  return sequence;
+}
+
+/** Expands a materialized day sequence into concrete calendar-dated schedule entries. */
+export function buildScheduleFromDaySequence(
+  daySequence: DaySlot[],
+  startDateISO: string
 ): Record<string, ScheduledDay> {
   const schedule: Record<string, ScheduledDay> = {};
   const start = parseISO(startDateISO);
-  const totalDays = durationWeeks * 7;
 
-  for (let i = 0; i < totalDays; i++) {
+  daySequence.forEach((slot, i) => {
+    if (slot.length === 0) return;
+
     const date = addDays(start, i);
-    const dayOfWeek = date.getDay();
-    const entries = template[dayOfWeek];
-    if (!entries || entries.length === 0) continue;
-
     const dateISO = formatISO(date, { representation: "date" });
-    const muscleGroups = Array.from(new Set(entries.map((e) => e.muscleGroup)));
-    const exercises = entries.flatMap((e) =>
+    const muscleGroups = Array.from(new Set(slot.map((e) => e.muscleGroup)));
+    const exercises = slot.flatMap((e) =>
       e.exerciseIds.map((exerciseId) => ({
         exerciseId,
         muscleGroup: e.muscleGroup,
@@ -66,17 +64,35 @@ export function buildScheduleFromTemplate(
     );
 
     schedule[dateISO] = { date: dateISO, muscleGroups, exercises };
-  }
+  });
 
   return schedule;
 }
 
-export function generateSchedule(
-  targets: PlanTarget[],
-  startDateISO: string,
-  durationWeeks: number
-): { weeklyTemplate: WeeklyTemplate; schedule: Record<string, ScheduledDay> } {
-  const weeklyTemplate = buildWeeklyTemplate(targets);
-  const schedule = buildScheduleFromTemplate(weeklyTemplate, startDateISO, durationWeeks);
-  return { weeklyTemplate, schedule };
+/**
+ * "Push today": today (at `index`) becomes a rest day. Everything after it
+ * shifts forward by one day, but only up to the next scheduled rest day,
+ * which gets converted into a workout day to absorb the shift — so a single
+ * missed day doesn't cascade through the rest of the plan. If no rest day
+ * exists between today and the end, the whole remainder shifts and the
+ * sequence grows by one day.
+ */
+export function pushDayInSequence(daySequence: DaySlot[], index: number): DaySlot[] {
+  if (index < 0 || index >= daySequence.length) return daySequence;
+
+  let restIndex = -1;
+  for (let j = index + 1; j < daySequence.length; j++) {
+    if (daySequence[j].length === 0) {
+      restIndex = j;
+      break;
+    }
+  }
+
+  if (restIndex === -1) {
+    return [...daySequence.slice(0, index), [], ...daySequence.slice(index)];
+  }
+
+  const span = daySequence.slice(index, restIndex + 1); // ends with the rest day
+  const rotated = [span[span.length - 1], ...span.slice(0, span.length - 1)];
+  return [...daySequence.slice(0, index), ...rotated, ...daySequence.slice(restIndex + 1)];
 }
