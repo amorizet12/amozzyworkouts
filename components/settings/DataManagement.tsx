@@ -5,6 +5,15 @@ import { format } from "date-fns";
 import { Download, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { refreshApp } from "@/lib/refreshApp";
+import { ActivityLevel } from "@/lib/types";
+
+const ACTIVITY_LEVELS: { id: ActivityLevel; label: string }[] = [
+  { id: "sedentary", label: "Sedentary" },
+  { id: "light", label: "Lightly active" },
+  { id: "moderate", label: "Moderately active" },
+  { id: "active", label: "Active" },
+  { id: "very_active", label: "Very active" },
+];
 
 export default function DataManagement() {
   const exportData = useStore((s) => s.exportData);
@@ -12,6 +21,8 @@ export default function DataManagement() {
   const clearAllData = useStore((s) => s.clearAllData);
   const weightUnit = useStore((s) => s.weightUnit);
   const setWeightUnit = useStore((s) => s.setWeightUnit);
+  const profile = useStore((s) => s.profile);
+  const setProfile = useStore((s) => s.setProfile);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: "ok" | "error"; message: string } | null>(null);
@@ -75,6 +86,93 @@ export default function DataManagement() {
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="rounded-xl border border-base-700/60 bg-base-900/40 p-4">
+        <p className="text-[13.5px] font-semibold text-base-100">Your stats</p>
+        <p className="mt-0.5 text-[12px] text-base-500">
+          Bodyweight and sex power your DOTS score in the Exercises tab (a bodyweight-relative
+          strength score). Height gives you a BMI reference. Activity level is just saved for
+          future features — nothing uses it yet.
+        </p>
+
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-base-400">Sex</span>
+            <div className="flex gap-1.5">
+              {(["male", "female"] as const).map((sex) => (
+                <button
+                  key={sex}
+                  onClick={() => setProfile({ sex })}
+                  className={[
+                    "flex-1 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium capitalize transition-colors",
+                    profile.sex === sex
+                      ? "bg-accent-400 text-base-950"
+                      : "bg-base-800 text-base-400 hover:text-base-100",
+                  ].join(" ")}
+                >
+                  {sex}
+                </button>
+              ))}
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-base-400">
+              Bodyweight ({weightUnit})
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={profile.bodyweight ?? ""}
+              onChange={(e) =>
+                setProfile({ bodyweight: e.target.value === "" ? null : parseFloat(e.target.value) })
+              }
+              className="rounded-lg border border-base-700 bg-base-950 px-2.5 py-1.5 text-[13px] text-base-100 outline-none focus:border-accent-400/60"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-base-400">Height (in)</span>
+            <input
+              type="number"
+              min={0}
+              value={profile.heightIn ?? ""}
+              onChange={(e) =>
+                setProfile({ heightIn: e.target.value === "" ? null : parseFloat(e.target.value) })
+              }
+              className="rounded-lg border border-base-700 bg-base-950 px-2.5 py-1.5 text-[13px] text-base-100 outline-none focus:border-accent-400/60"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-base-400">Activity level</span>
+            <select
+              value={profile.activityLevel ?? ""}
+              onChange={(e) =>
+                setProfile({ activityLevel: (e.target.value || null) as ActivityLevel | null })
+              }
+              className="rounded-lg border border-base-700 bg-base-950 px-2.5 py-1.5 text-[13px] text-base-100 outline-none focus:border-accent-400/60"
+            >
+              <option value="">Not set</option>
+              {ACTIVITY_LEVELS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {profile.bodyweight && profile.heightIn && (
+          <p className="mt-2 text-[11.5px] text-base-500">
+            BMI:{" "}
+            {(
+              (703 * (weightUnit === "kg" ? profile.bodyweight * 2.2046226218 : profile.bodyweight)) /
+              (profile.heightIn * profile.heightIn)
+            ).toFixed(1)}
+          </p>
+        )}
       </section>
 
       <section className="rounded-xl border border-base-700/60 bg-base-900/40 p-4">

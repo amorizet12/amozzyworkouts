@@ -26,12 +26,28 @@ export interface PlanTarget {
   muscleGroup: MuscleGroupId;
   timesPerWeek: number;
   exerciseIds: string[];
+  setsPerExercise: number;
+}
+
+export interface WeeklyTemplateEntry {
+  muscleGroup: MuscleGroupId;
+  exerciseIds: string[];
+  setsPerExercise: number;
+}
+
+// Sunday = 0 ... Saturday = 6, matching Date#getDay()
+export type WeeklyTemplate = Record<number, WeeklyTemplateEntry[]>;
+
+export interface ScheduledExercise {
+  exerciseId: string;
+  muscleGroup: MuscleGroupId;
+  targetSets: number;
 }
 
 export interface ScheduledDay {
   date: string; // ISO yyyy-mm-dd
   muscleGroups: MuscleGroupId[];
-  exercises: { exerciseId: string; muscleGroup: MuscleGroupId }[];
+  exercises: ScheduledExercise[];
 }
 
 export interface Plan {
@@ -40,6 +56,7 @@ export interface Plan {
   startDate: string; // ISO yyyy-mm-dd
   durationWeeks: number;
   targets: PlanTarget[];
+  weeklyTemplate: WeeklyTemplate;
   schedule: Record<string, ScheduledDay>;
   createdAt: string;
 }
@@ -49,11 +66,28 @@ export interface LoggedSet {
   exerciseId: string;
   weight: number;
   reps: number;
+  rpe?: number; // 6-10 in 0.5 increments; omitted = unknown effort
   setNumber: number;
   loggedAt: string;
 }
 
 export type WorkoutLog = Record<string, LoggedSet[]>; // date -> sets
+
+export type Sex = "male" | "female";
+
+export type ActivityLevel =
+  | "sedentary"
+  | "light"
+  | "moderate"
+  | "active"
+  | "very_active";
+
+export interface UserProfile {
+  sex: Sex | null;
+  bodyweight: number | null; // in current weightUnit
+  heightIn: number | null;
+  activityLevel: ActivityLevel | null;
+}
 
 export interface AppData {
   exercises: Exercise[];
@@ -61,4 +95,5 @@ export interface AppData {
   activePlanId: string | null;
   logs: WorkoutLog;
   weightUnit: "lbs" | "kg";
+  profile: UserProfile;
 }

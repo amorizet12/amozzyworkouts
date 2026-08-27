@@ -31,11 +31,13 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
     if (!scheduled) return [];
     return scheduled.muscleGroups.map((mg) => ({
       muscleGroup: mg,
-      exercises: exercises.filter(
-        (e) =>
-          e.muscleGroup === mg &&
-          scheduled.exercises.some((se) => se.exerciseId === e.id && se.muscleGroup === mg)
-      ),
+      exercises: scheduled.exercises
+        .filter((se) => se.muscleGroup === mg)
+        .map((se) => ({
+          exercise: exercises.find((e) => e.id === se.exerciseId),
+          targetSets: se.targetSets,
+        }))
+        .filter((e): e is { exercise: Exercise; targetSets: number } => Boolean(e.exercise)),
     }));
   }, [scheduled, exercises]);
 
@@ -86,8 +88,14 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
         (group) =>
           group.exercises.length > 0 && (
             <div key={group.muscleGroup} className="space-y-2">
-              {group.exercises.map((ex) => (
-                <ExerciseRow key={ex.id} exercise={ex} dateISO={dateISO} weightUnit={weightUnit} />
+              {group.exercises.map(({ exercise, targetSets }) => (
+                <ExerciseRow
+                  key={exercise.id}
+                  exercise={exercise}
+                  dateISO={dateISO}
+                  weightUnit={weightUnit}
+                  targetSets={targetSets}
+                />
               ))}
             </div>
           )
@@ -121,14 +129,18 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+
 function ExerciseRow({
   exercise,
   dateISO,
   weightUnit,
+  targetSets,
 }: {
   exercise: Exercise;
   dateISO: string;
   weightUnit: "lbs" | "kg";
+  targetSets?: number;
 }) {
   const logs = useStore((s) => s.logs);
   const logSet = useStore((s) => s.logSet);
@@ -136,6 +148,7 @@ function ExerciseRow({
 
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
+  const [rpe, setRpe] = useState("8");
 
   const todaySets = (logs[dateISO] ?? []).filter((s) => s.exerciseId === exercise.id);
   const last = getLastPerformance(logs, exercise.id, dateISO);
@@ -144,7 +157,8 @@ function ExerciseRow({
     const w = parseFloat(weight);
     const r = parseInt(reps, 10);
     if (Number.isNaN(w) || Number.isNaN(r) || w < 0 || r <= 0) return;
-    logSet(dateISO, exercise.id, w, r);
+    const rpeValue = rpe === "" ? undefined : parseFloat(rpe);
+    logSet(dateISO, exercise.id, w, r, rpeValue);
     setReps("");
   };
 
@@ -152,7 +166,14 @@ function ExerciseRow({
     <div className="rounded-xl border border-base-700/60 bg-base-900/40 p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[13.5px] font-medium text-base-100">{exercise.name}</p>
+          <p className="text-[13.5px] font-medium text-base-100">
+            {exercise.name}
+            {targetSets != null && (
+              <span className="ml-1.5 text-[11px] font-normal text-base-500">
+                target: {targetSets} sets
+              </span>
+            )}
+          </p>
           {last && (
             <p className="text-[11.5px] text-base-500">
               Last: {last.sets.map((s) => `${s.weight}${weightUnit}×${s.reps}`).join(", ")}
@@ -170,6 +191,7 @@ function ExerciseRow({
             >
               {s.weight}
               {weightUnit}×{s.reps}
+              {s.rpe != null && <span className="text-accent-400/70">@{s.rpe}</span>}
               <button
                 onClick={() => deleteSet(dateISO, s.id)}
                 className="text-accent-400/50 hover:text-accent-400"
@@ -201,6 +223,19 @@ function ExerciseRow({
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           className="w-16 rounded-lg border border-base-700 bg-base-950 px-2 py-1.5 text-[13px] text-base-100 outline-none focus:border-accent-400/60"
         />
+        <select
+          value={rpe}
+          onChange={(e) => setRpe(e.target.value)}
+          title="RPE — how hard was this set? (optional)"
+          className="rounded-lg border border-base-700 bg-base-950 px-1.5 py-1.5 text-[12px] text-base-100 outline-none focus:border-accent-400/60"
+        >
+          <option value="">RPE –</option>
+          {RPE_OPTIONS.map((v) => (
+            <option key={v} value={v}>
+              @{v}
+            </option>
+          ))}
+        </select>
         <button
           onClick={handleAdd}
           className="ml-auto flex items-center gap-1 rounded-lg bg-accent-400 px-2.5 py-1.5 text-[12px] font-semibold text-base-950 hover:bg-accent-300"

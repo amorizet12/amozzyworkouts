@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Trash2, TrendingUp } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { MUSCLE_GROUPS } from "@/lib/muscleGroups";
 import { MuscleGroupId } from "@/lib/types";
+import { bestEstimatedOneRepMax, dotsScore, toKg } from "@/lib/strength";
 
 export default function ExerciseLibrary() {
   const exercises = useStore((s) => s.exercises);
@@ -49,6 +50,9 @@ function ExerciseList({ muscleGroup }: { muscleGroup: MuscleGroupId }) {
   const addExercise = useStore((s) => s.addExercise);
   const updateExercise = useStore((s) => s.updateExercise);
   const deleteExercise = useStore((s) => s.deleteExercise);
+  const logs = useStore((s) => s.logs);
+  const weightUnit = useStore((s) => s.weightUnit);
+  const profile = useStore((s) => s.profile);
 
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,53 +66,70 @@ function ExerciseList({ muscleGroup }: { muscleGroup: MuscleGroupId }) {
 
   return (
     <div className="space-y-1.5">
-      {exercises.map((ex) => (
-        <div
-          key={ex.id}
-          className="flex items-center justify-between gap-2 rounded-lg bg-base-800/60 px-2.5 py-1.5"
-        >
-          {editingId === ex.id ? (
-            <input
-              autoFocus
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  updateExercise(ex.id, editValue);
-                  setEditingId(null);
-                }
-                if (e.key === "Escape") setEditingId(null);
-              }}
-              onBlur={() => {
-                updateExercise(ex.id, editValue);
-                setEditingId(null);
-              }}
-              className="flex-1 rounded-md border border-accent-400/50 bg-base-950 px-2 py-1 text-[13px] text-base-100 outline-none"
-            />
-          ) : (
-            <span className="text-[13px] text-base-100">{ex.name}</span>
-          )}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => {
-                setEditingId(ex.id);
-                setEditValue(ex.name);
-              }}
-              className="rounded-md p-1 text-base-500 hover:bg-base-700 hover:text-base-100"
-              aria-label="Rename"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => deleteExercise(ex.id)}
-              className="rounded-md p-1 text-base-500 hover:bg-red-500/15 hover:text-red-400"
-              aria-label="Delete"
-            >
-              <Trash2 size={13} />
-            </button>
+      {exercises.map((ex) => {
+        const e1rm = bestEstimatedOneRepMax(logs, ex.id);
+        const dots =
+          e1rm != null && profile.sex && profile.bodyweight
+            ? dotsScore(toKg(e1rm, weightUnit), toKg(profile.bodyweight, weightUnit), profile.sex)
+            : null;
+
+        return (
+          <div key={ex.id} className="rounded-lg bg-base-800/60 px-2.5 py-1.5">
+            <div className="flex items-center justify-between gap-2">
+              {editingId === ex.id ? (
+                <input
+                  autoFocus
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      updateExercise(ex.id, editValue);
+                      setEditingId(null);
+                    }
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  onBlur={() => {
+                    updateExercise(ex.id, editValue);
+                    setEditingId(null);
+                  }}
+                  className="flex-1 rounded-md border border-accent-400/50 bg-base-950 px-2 py-1 text-[13px] text-base-100 outline-none"
+                />
+              ) : (
+                <span className="text-[13px] text-base-100">{ex.name}</span>
+              )}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setEditingId(ex.id);
+                    setEditValue(ex.name);
+                  }}
+                  className="rounded-md p-1 text-base-500 hover:bg-base-700 hover:text-base-100"
+                  aria-label="Rename"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={() => deleteExercise(ex.id)}
+                  className="rounded-md p-1 text-base-500 hover:bg-red-500/15 hover:text-red-400"
+                  aria-label="Delete"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+            {e1rm != null && (
+              <p className="mt-0.5 flex items-center gap-1 text-[11px] text-accent-400/80">
+                <TrendingUp size={11} />
+                Est. 1RM: {Math.round(e1rm)}
+                {weightUnit}
+                {dots != null && (
+                  <span className="text-base-500"> · DOTS {dots.toFixed(1)}</span>
+                )}
+              </p>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <div className="flex items-center gap-1.5 pt-1">
         <input
