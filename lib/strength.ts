@@ -77,6 +77,18 @@ export function dotsScore(liftKg: number, bodyweightKg: number, sex: Sex): numbe
   return (liftKg * 500) / denominator;
 }
 
+export const RPE_SCALE: { value: number; label: string }[] = [
+  { value: 6, label: "Very easy" },
+  { value: 6.5, label: "Easy" },
+  { value: 7, label: "Moderate" },
+  { value: 7.5, label: "Somewhat hard" },
+  { value: 8, label: "Hard" },
+  { value: 8.5, label: "Fairly difficult" },
+  { value: 9, label: "Very hard" },
+  { value: 9.5, label: "Extremely hard" },
+  { value: 10, label: "Maximum effort" },
+];
+
 // Standard NSCA %1RM-by-rep-goal guidelines (Essentials of Strength
 // Training and Conditioning), used as reference points when planning loads.
 export const NSCA_LOAD_GUIDE: { reps: number; percent: number }[] = [

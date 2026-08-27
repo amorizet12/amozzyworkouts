@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { Exercise, MuscleGroupId } from "@/lib/types";
 import { MUSCLE_GROUPS, muscleGroupColor, muscleGroupLabel } from "@/lib/muscleGroups";
 import { getLastPerformance } from "@/lib/history";
+import { RPE_SCALE } from "@/lib/strength";
 
 interface DayPanelProps {
   dateISO: string;
@@ -129,8 +130,6 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-const RPE_OPTIONS = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
-
 function ExerciseRow({
   exercise,
   dateISO,
@@ -191,7 +190,7 @@ function ExerciseRow({
             >
               {s.weight}
               {weightUnit}×{s.reps}
-              {s.rpe != null && <span className="text-accent-400/70">@{s.rpe}</span>}
+              {s.rpe != null && <span className="text-accent-400/70">RPE {s.rpe}</span>}
               <button
                 onClick={() => deleteSet(dateISO, s.id)}
                 className="text-accent-400/50 hover:text-accent-400"
@@ -223,19 +222,6 @@ function ExerciseRow({
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           className="w-16 rounded-lg border border-base-700 bg-base-950 px-2 py-1.5 text-[13px] text-base-100 outline-none focus:border-accent-400/60"
         />
-        <select
-          value={rpe}
-          onChange={(e) => setRpe(e.target.value)}
-          title="RPE — how hard was this set? (optional)"
-          className="rounded-lg border border-base-700 bg-base-950 px-1.5 py-1.5 text-[12px] text-base-100 outline-none focus:border-accent-400/60"
-        >
-          <option value="">RPE –</option>
-          {RPE_OPTIONS.map((v) => (
-            <option key={v} value={v}>
-              @{v}
-            </option>
-          ))}
-        </select>
         <button
           onClick={handleAdd}
           className="ml-auto flex items-center gap-1 rounded-lg bg-accent-400 px-2.5 py-1.5 text-[12px] font-semibold text-base-950 hover:bg-accent-300"
@@ -244,6 +230,19 @@ function ExerciseRow({
           Set
         </button>
       </div>
+      <select
+        value={rpe}
+        onChange={(e) => setRpe(e.target.value)}
+        title="RPE — how hard was this set? (optional)"
+        className="mt-1.5 w-full rounded-lg border border-base-700 bg-base-950 px-2 py-1.5 text-[12px] text-base-100 outline-none focus:border-accent-400/60"
+      >
+        <option value="">Effort (RPE) — not recorded</option>
+        {RPE_SCALE.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {value} - {label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
