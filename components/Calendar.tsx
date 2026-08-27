@@ -16,7 +16,7 @@ import {
   startOfWeek,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Flame } from "lucide-react";
 import { Plan, WorkoutLog } from "@/lib/types";
 import { muscleGroupColor } from "@/lib/muscleGroups";
 
@@ -25,11 +25,20 @@ interface CalendarProps {
   onSelect: (dateISO: string) => void;
   activePlan: Plan | null;
   logs: WorkoutLog;
+  completedDates: Set<string>;
+  streak: number;
 }
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-export default function Calendar({ selectedDate, onSelect, activePlan, logs }: CalendarProps) {
+export default function Calendar({
+  selectedDate,
+  onSelect,
+  activePlan,
+  logs,
+  completedDates,
+  streak,
+}: CalendarProps) {
   const [monthCursor, setMonthCursor] = useState(() => parseISO(selectedDate));
 
   const days = useMemo(() => {
@@ -41,9 +50,17 @@ export default function Calendar({ selectedDate, onSelect, activePlan, logs }: C
   return (
     <div className="rounded-2xl border border-base-700/60 bg-base-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold text-base-100">
-          {format(monthCursor, "MMMM yyyy")}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-[15px] font-semibold text-base-100">
+            {format(monthCursor, "MMMM yyyy")}
+          </h2>
+          {streak > 0 && (
+            <span className="flex items-center gap-1 rounded-full bg-accent-400/15 px-2 py-0.5 text-[11px] font-semibold text-accent-400">
+              <Flame size={11} />
+              {streak}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setMonthCursor((m) => subMonths(m, 1))}
@@ -88,6 +105,7 @@ export default function Calendar({ selectedDate, onSelect, activePlan, logs }: C
           const today = isToday(day);
           const scheduled = activePlan?.schedule[dateISO];
           const hasLogs = (logs[dateISO]?.length ?? 0) > 0;
+          const completed = completedDates.has(dateISO);
 
           return (
             <button
@@ -103,6 +121,14 @@ export default function Calendar({ selectedDate, onSelect, activePlan, logs }: C
                 today && !selected ? "ring-1 ring-accent-400/60" : "",
               ].join(" ")}
             >
+              {completed && (
+                <span
+                  className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
+                  style={{ backgroundColor: selected ? "#0a0d0c" : "#39e991" }}
+                >
+                  <Check size={8} strokeWidth={3} color={selected ? "#39e991" : "#0a0d0c"} />
+                </span>
+              )}
               <span>{format(day, "d")}</span>
               <span className="flex h-1.5 items-center gap-0.5">
                 {scheduled?.muscleGroups.slice(0, 3).map((mg) => (

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Dumbbell, Settings } from "lucide-react";
+import { CalendarDays, Dumbbell, LineChart, Settings } from "lucide-react";
 
 const links = [
   { href: "/", label: "Calendar", icon: CalendarDays },
+  { href: "/progress", label: "Progress", icon: LineChart },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

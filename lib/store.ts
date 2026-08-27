@@ -40,6 +40,7 @@ interface StoreState extends AppData {
     newExerciseId: string
   ) => void;
   pushDay: (planId: string, dateISO: string) => void;
+  toggleDayComplete: (dateISO: string) => void;
   logSet: (date: string, exerciseId: string, weight: number, reps: number, rpe?: number) => void;
   deleteSet: (date: string, setId: string) => void;
   setWeightUnit: (unit: "lbs" | "kg") => void;
@@ -130,6 +131,7 @@ export const useStore = create<StoreState>()(
       logs: {},
       weightUnit: "lbs",
       profile: emptyProfile,
+      completedDates: [],
       hydrated: false,
 
       setHydrated: () => set({ hydrated: true }),
@@ -243,6 +245,17 @@ export const useStore = create<StoreState>()(
         }));
       },
 
+      toggleDayComplete: (dateISO) => {
+        set((state) => {
+          const has = state.completedDates.includes(dateISO);
+          return {
+            completedDates: has
+              ? state.completedDates.filter((d) => d !== dateISO)
+              : [...state.completedDates, dateISO],
+          };
+        });
+      },
+
       logSet: (date, exerciseId, weight, reps, rpe) => {
         set((state) => {
           const existing = state.logs[date] ?? [];
@@ -279,11 +292,11 @@ export const useStore = create<StoreState>()(
       },
 
       exportData: () => {
-        const { exercises, plans, activePlanId, logs, weightUnit, profile } = get();
+        const { exercises, plans, activePlanId, logs, weightUnit, profile, completedDates } = get();
         const payload = {
-          version: 3,
+          version: 4,
           exportedAt: new Date().toISOString(),
-          data: { exercises, plans, activePlanId, logs, weightUnit, profile },
+          data: { exercises, plans, activePlanId, logs, weightUnit, profile, completedDates },
         };
         return JSON.stringify(payload, null, 2);
       },
@@ -303,6 +316,7 @@ export const useStore = create<StoreState>()(
             logs: data.logs ?? {},
             weightUnit: data.weightUnit === "kg" ? "kg" : "lbs",
             profile: { ...emptyProfile, ...(data.profile ?? {}) },
+            completedDates: Array.isArray(data.completedDates) ? data.completedDates : [],
           });
           return { ok: true };
         } catch {
@@ -318,19 +332,25 @@ export const useStore = create<StoreState>()(
           logs: {},
           weightUnit: "lbs",
           profile: emptyProfile,
+          completedDates: [],
         });
       },
     }),
     {
       name: "amozzy-workouts-data",
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
         const state = persisted as Partial<StoreState> | undefined;
         if (!state) return state;
 
         const plans = (state.plans ?? []).map(normalizePlan);
 
-        return { ...state, plans, profile: state.profile ?? emptyProfile };
+        return {
+          ...state,
+          plans,
+          profile: state.profile ?? emptyProfile,
+          completedDates: state.completedDates ?? [],
+        };
       },
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();

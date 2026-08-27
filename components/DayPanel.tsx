@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format, formatISO, isToday, parseISO } from "date-fns";
-import { CalendarClock, Plus, X } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, Plus, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Exercise, MuscleGroupId } from "@/lib/types";
 import { MUSCLE_GROUPS, muscleGroupColor, muscleGroupLabel } from "@/lib/muscleGroups";
@@ -20,10 +20,13 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
   const plans = useStore((s) => s.plans);
   const weightUnit = useStore((s) => s.weightUnit);
   const pushDay = useStore((s) => s.pushDay);
+  const completedDates = useStore((s) => s.completedDates);
+  const toggleDayComplete = useStore((s) => s.toggleDayComplete);
 
   const activePlan = plans.find((p) => p.id === activePlanId) ?? null;
   const scheduled = activePlan?.schedule[dateISO];
   const isTodayView = isToday(parseISO(dateISO));
+  const isCompleted = completedDates.includes(dateISO);
 
   const scheduledExerciseIds = useMemo(
     () => new Set(scheduled?.exercises.map((e) => e.exerciseId) ?? []),
@@ -79,7 +82,22 @@ export default function DayPanel({ dateISO }: DayPanelProps) {
         )}
       </div>
 
-      {isTodayView && scheduled && activePlanId && (
+      {scheduled && (
+        <button
+          onClick={() => toggleDayComplete(dateISO)}
+          className={[
+            "flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[12.5px] font-semibold transition-colors",
+            isCompleted
+              ? "bg-accent-400 text-base-950 hover:bg-accent-300"
+              : "border border-base-700 text-base-400 hover:border-accent-400/40 hover:text-accent-400",
+          ].join(" ")}
+        >
+          {isCompleted ? <CheckCircle2 size={15} /> : <Circle size={15} />}
+          {isCompleted ? "Workout complete" : "Mark as complete"}
+        </button>
+      )}
+
+      {isTodayView && scheduled && activePlanId && !isCompleted && (
         <button
           onClick={() => pushDay(activePlanId, dateISO)}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-base-700 py-2 text-[12.5px] font-medium text-base-400 hover:border-accent-400/40 hover:text-accent-400"

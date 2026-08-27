@@ -96,4 +96,5 @@ export interface AppData {
   logs: WorkoutLog;
   weightUnit: "lbs" | "kg";
   profile: UserProfile;
+  completedDates: string[]; // ISO dates the user marked a scheduled workout complete
 }
