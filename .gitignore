@@ -6,3 +6,7 @@ out
 .DS_Store
 *.log
 .claude/*.lock
+.env
+.env.*
+!.env.example
+*.tsbuildinfo

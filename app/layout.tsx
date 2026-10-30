@@ -2,12 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import ThemeApplier from "@/components/ThemeApplier";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Amozzy Workouts",
+  title: "PRISM",
   description: "Your training calendar, exercise library, and lift log.",
   manifest: "/manifest.json",
   icons: {
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Amozzy",
+    title: "PRISM",
   },
 };
 
@@ -26,6 +28,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -38,9 +41,11 @@ export default function RootLayout({
       <body className="min-h-screen bg-base-950 font-sans antialiased">
         <div className="mx-auto flex min-h-screen max-w-3xl flex-col">
           <NavBar />
-          <main className="flex-1 px-4 pb-16 pt-4 sm:px-6">{children}</main>
+          <main className="flex-1 px-4 pb-24 pt-4 sm:px-6">{children}</main>
         </div>
+        <BottomNav />
         <ServiceWorkerRegister />
+        <ThemeApplier />
       </body>
     </html>
   );

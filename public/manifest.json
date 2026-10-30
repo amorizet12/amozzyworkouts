@@ -1,6 +1,6 @@
 {
-  "name": "Amozzy Workouts",
-  "short_name": "Amozzy",
+  "name": "PRISM",
+  "short_name": "PRISM",
   "description": "Your training calendar, exercise library, and lift log.",
   "start_url": "/",
   "display": "standalone",

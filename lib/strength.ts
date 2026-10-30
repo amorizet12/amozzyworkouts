@@ -1,4 +1,4 @@
-import { LoggedSet, Sex, WorkoutLog } from "./types";
+import { EquipmentType, LoggedSet, Sex, WorkoutLog } from "./types";
 
 /**
  * %1RM by rep count at RPE 10 (true failure), from the Reactive Training
@@ -75,6 +75,21 @@ export function dotsScore(liftKg: number, bodyweightKg: number, sex: Sex): numbe
   const denominator = a * bw ** 4 + b * bw ** 3 + c * bw ** 2 + d * bw + e;
   if (denominator <= 0) return null;
   return (liftKg * 500) / denominator;
+}
+
+export const DOTS_EXPLANATION =
+  "DOTS is a bodyweight-adjusted strength score (the 2020 update to the old Wilks formula). It scales a lift against what's typical for someone at your bodyweight, so a 130lb lifter and a 230lb lifter can be compared fairly on the same number — higher DOTS means more relative strength, regardless of size.";
+
+/** DOTS only makes sense for lifts with a real external load. Dumbbell
+ * weight is logged per arm, so both hands' load is doubled to approximate
+ * the total lifted weight; bodyweight and band exercises have no
+ * quantifiable load and are excluded entirely. */
+export function dotsApplicable(equipment: EquipmentType): boolean {
+  return equipment === "barbell" || equipment === "dumbbell";
+}
+
+export function dotsLiftWeight(e1rm: number, equipment: EquipmentType): number {
+  return equipment === "dumbbell" ? e1rm * 2 : e1rm;
 }
 
 export const RPE_SCALE: { value: number; label: string }[] = [

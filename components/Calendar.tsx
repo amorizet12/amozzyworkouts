@@ -124,9 +124,15 @@ export default function Calendar({
               {completed && (
                 <span
                   className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
-                  style={{ backgroundColor: selected ? "#0a0d0c" : "#39e991" }}
+                  style={{
+                    backgroundColor: selected ? "rgb(var(--base-950))" : "rgb(var(--accent-400))",
+                  }}
                 >
-                  <Check size={8} strokeWidth={3} color={selected ? "#39e991" : "#0a0d0c"} />
+                  <Check
+                    size={8}
+                    strokeWidth={3}
+                    color={selected ? "rgb(var(--accent-400))" : "rgb(var(--base-950))"}
+                  />
                 </span>
               )}
               <span>{format(day, "d")}</span>
@@ -136,7 +142,7 @@ export default function Calendar({
                     key={mg}
                     className="h-1.5 w-1.5 rounded-full"
                     style={{
-                      backgroundColor: selected ? "#0a0d0c" : muscleGroupColor(mg),
+                      backgroundColor: selected ? "rgb(var(--base-950))" : muscleGroupColor(mg),
                       opacity: selected ? 0.6 : 1,
                     }}
                   />
@@ -144,7 +150,7 @@ export default function Calendar({
                 {hasLogs && !scheduled && (
                   <span
                     className="h-1.5 w-1.5 rounded-full border"
-                    style={{ borderColor: selected ? "#0a0d0c" : "#5f746b" }}
+                    style={{ borderColor: selected ? "rgb(var(--base-950))" : "rgb(var(--base-500))" }}
                   />
                 )}
               </span>

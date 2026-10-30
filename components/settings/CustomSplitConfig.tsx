@@ -29,7 +29,7 @@ export default function CustomSplitConfig({ slots, onChange, exercises }: Custom
     if (slot[mg]) {
       delete slot[mg];
     } else {
-      slot[mg] = { exerciseIds: [], setsPerExercise: 3 };
+      slot[mg] = { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
     }
     next[i] = slot;
     onChange(next);
@@ -37,7 +37,7 @@ export default function CustomSplitConfig({ slots, onChange, exercises }: Custom
 
   const toggleExercise = (i: number, mg: MuscleGroupId, exerciseId: string) => {
     const next = [...slots];
-    const current = next[i][mg] ?? { exerciseIds: [], setsPerExercise: 3 };
+    const current = next[i][mg] ?? { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
     const has = current.exerciseIds.includes(exerciseId);
     next[i] = {
       ...next[i],
@@ -53,10 +53,20 @@ export default function CustomSplitConfig({ slots, onChange, exercises }: Custom
 
   const changeSets = (i: number, mg: MuscleGroupId, delta: number) => {
     const next = [...slots];
-    const current = next[i][mg] ?? { exerciseIds: [], setsPerExercise: 3 };
+    const current = next[i][mg] ?? { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
     next[i] = {
       ...next[i],
       [mg]: { ...current, setsPerExercise: Math.min(10, Math.max(1, current.setsPerExercise + delta)) },
+    };
+    onChange(next);
+  };
+
+  const changeWarmup = (i: number, mg: MuscleGroupId, delta: number) => {
+    const next = [...slots];
+    const current = next[i][mg] ?? { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
+    next[i] = {
+      ...next[i],
+      [mg]: { ...current, warmupSets: Math.min(5, Math.max(0, current.warmupSets + delta)) },
     };
     onChange(next);
   };
@@ -133,8 +143,10 @@ export default function CustomSplitConfig({ slots, onChange, exercises }: Custom
                     exercises={exercises}
                     exerciseIds={slot[mg]?.exerciseIds ?? []}
                     setsPerExercise={slot[mg]?.setsPerExercise ?? 3}
+                    warmupSets={slot[mg]?.warmupSets ?? 1}
                     onToggleExercise={(exerciseId) => toggleExercise(i, mg, exerciseId)}
                     onSetsChange={(delta) => changeSets(i, mg, delta)}
+                    onWarmupChange={(delta) => changeWarmup(i, mg, delta)}
                     showWarning={(slot[mg]?.exerciseIds.length ?? 0) === 0}
                   />
                 ))}

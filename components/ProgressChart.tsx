@@ -20,10 +20,13 @@ const MARGIN = { top: 24, right: 14, bottom: 28, left: 46 };
 const PLOT_W = VIEW_W - MARGIN.left - MARGIN.right;
 const PLOT_H = VIEW_H - MARGIN.top - MARGIN.bottom;
 
-const SURFACE = "#0f1412"; // base-900, the card surface these render on
-const GRID = "#1d2621"; // base-700
-const AXIS_TEXT = "#7c9088"; // base-400
-const ACCENT = "#39e991";
+// Read as CSS vars so the chart follows the user's chosen theme/accent color.
+const SURFACE = "rgb(var(--base-900))";
+const GRID = "rgb(var(--base-700))";
+const AXIS_TEXT = "rgb(var(--base-400))";
+const ACCENT = "rgb(var(--accent-400))";
+const HOVER_LINE = "rgb(var(--base-600))";
+const VALUE_TEXT = "rgb(var(--base-100))";
 
 export default function ProgressChart({ points, unit, formatValue }: ProgressChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -94,23 +97,30 @@ export default function ProgressChart({ points, unit, formatValue }: ProgressCha
               x2={VIEW_W - MARGIN.right}
               y1={yAt(v)}
               y2={yAt(v)}
-              stroke={GRID}
+              style={{ stroke: GRID }}
               strokeWidth={1}
             />
-            <text x={MARGIN.left - 8} y={yAt(v)} dy={4} textAnchor="end" fontSize={10} fill={AXIS_TEXT}>
+            <text x={MARGIN.left - 8} y={yAt(v)} dy={4} textAnchor="end" fontSize={10} style={{ fill: AXIS_TEXT }}>
               {fmt(v)}
             </text>
           </g>
         ))}
 
-        <text x={MARGIN.left} y={VIEW_H - 8} fontSize={10} fill={AXIS_TEXT}>
+        <text x={MARGIN.left} y={VIEW_H - 8} fontSize={10} style={{ fill: AXIS_TEXT }}>
           {format(parseISO(points[0].date), "MMM d")}
         </text>
-        <text x={VIEW_W - MARGIN.right} y={VIEW_H - 8} textAnchor="end" fontSize={10} fill={AXIS_TEXT}>
+        <text x={VIEW_W - MARGIN.right} y={VIEW_H - 8} textAnchor="end" fontSize={10} style={{ fill: AXIS_TEXT }}>
           {format(parseISO(lastPoint.date), "MMM d")}
         </text>
 
-        <path d={linePath} fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={linePath}
+          fill="none"
+          style={{ stroke: ACCENT }}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
 
         {points.map((p, i) => (
           <circle
@@ -118,8 +128,7 @@ export default function ProgressChart({ points, unit, formatValue }: ProgressCha
             cx={xAt(i)}
             cy={yAt(p.value)}
             r={i === hoverIndex ? 6 : 4}
-            fill={ACCENT}
-            stroke={SURFACE}
+            style={{ fill: ACCENT, stroke: SURFACE }}
             strokeWidth={2}
           />
         ))}
@@ -130,7 +139,7 @@ export default function ProgressChart({ points, unit, formatValue }: ProgressCha
           textAnchor="end"
           fontSize={11}
           fontWeight={600}
-          fill="#e7f2ec"
+          style={{ fill: VALUE_TEXT }}
         >
           {fmt(lastPoint.value)}
           {unit}
@@ -142,7 +151,7 @@ export default function ProgressChart({ points, unit, formatValue }: ProgressCha
             x2={xAt(hoverIndex!)}
             y1={MARGIN.top}
             y2={VIEW_H - MARGIN.bottom}
-            stroke="#3c4a42"
+            style={{ stroke: HOVER_LINE }}
             strokeWidth={1}
           />
         )}

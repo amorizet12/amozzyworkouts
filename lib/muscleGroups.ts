@@ -1,7 +1,8 @@
-import { Exercise, MuscleGroupDef, MuscleGroupId } from "./types";
+import { EquipmentType, Exercise, MuscleGroupDef, MuscleGroupId } from "./types";
 import { makeId } from "./id";
 
 export const MUSCLE_GROUPS: MuscleGroupDef[] = [
+  { id: "cardio", label: "Cardio", color: "#fb7185" },
   { id: "chest", label: "Chest", color: "#39e991" },
   { id: "back", label: "Back", color: "#5cc8ff" },
   { id: "shoulders", label: "Shoulders", color: "#f2c94c" },
@@ -22,24 +23,88 @@ export function muscleGroupColor(id: MuscleGroupId): string {
   return MUSCLE_GROUPS.find((m) => m.id === id)?.color ?? "#39e991";
 }
 
-const defaultExerciseNames: Record<MuscleGroupId, string[]> = {
-  chest: ["Bench Press", "Incline Dumbbell Press", "Push-Ups", "Cable Fly", "Dips"],
-  back: ["Deadlift", "Pull-Ups", "Barbell Row", "Lat Pulldown", "Seated Cable Row"],
-  shoulders: ["Overhead Press", "Lateral Raise", "Front Raise", "Face Pull", "Arnold Press"],
-  biceps: ["Barbell Curl", "Dumbbell Curl", "Hammer Curl", "Preacher Curl"],
-  triceps: ["Close-Grip Bench Press", "Tricep Pushdown", "Skull Crushers", "Overhead Tricep Extension"],
-  quads: ["Back Squat", "Leg Press", "Walking Lunges", "Leg Extension"],
-  hamstrings: ["Romanian Deadlift", "Leg Curl", "Good Morning"],
-  glutes: ["Hip Thrust", "Glute Bridge", "Cable Kickback"],
-  calves: ["Standing Calf Raise", "Seated Calf Raise"],
-  core: ["Plank", "Hanging Leg Raise", "Cable Crunch", "Russian Twist"],
+type DefaultExercise = { name: string; equipment: EquipmentType };
+
+const defaultExerciseNames: Record<MuscleGroupId, DefaultExercise[]> = {
+  cardio: [
+    { name: "Walking", equipment: "cardio" },
+    { name: "Jogging", equipment: "cardio" },
+    { name: "Elliptical", equipment: "cardio" },
+  ],
+  chest: [
+    { name: "Bench Press", equipment: "barbell" },
+    { name: "Incline Dumbbell Press", equipment: "dumbbell" },
+    { name: "Push-Ups", equipment: "bodyweight" },
+    { name: "Cable Fly", equipment: "barbell" },
+    { name: "Dips", equipment: "bodyweight" },
+  ],
+  back: [
+    { name: "Deadlift", equipment: "barbell" },
+    { name: "Pull-Ups", equipment: "bodyweight" },
+    { name: "Barbell Row", equipment: "barbell" },
+    { name: "Lat Pulldown", equipment: "barbell" },
+    { name: "Seated Cable Row", equipment: "barbell" },
+  ],
+  shoulders: [
+    { name: "Overhead Press", equipment: "barbell" },
+    { name: "Lateral Raise", equipment: "dumbbell" },
+    { name: "Front Raise", equipment: "dumbbell" },
+    { name: "Face Pull", equipment: "band" },
+    { name: "Arnold Press", equipment: "dumbbell" },
+  ],
+  biceps: [
+    { name: "Barbell Curl", equipment: "barbell" },
+    { name: "Dumbbell Curl", equipment: "dumbbell" },
+    { name: "Hammer Curl", equipment: "dumbbell" },
+    { name: "Preacher Curl", equipment: "barbell" },
+  ],
+  triceps: [
+    { name: "Close-Grip Bench Press", equipment: "barbell" },
+    { name: "Tricep Pushdown", equipment: "barbell" },
+    { name: "Skull Crushers", equipment: "barbell" },
+    { name: "Overhead Tricep Extension", equipment: "dumbbell" },
+  ],
+  quads: [
+    { name: "Back Squat", equipment: "barbell" },
+    { name: "Leg Press", equipment: "barbell" },
+    { name: "Walking Lunges", equipment: "dumbbell" },
+    { name: "Leg Extension", equipment: "barbell" },
+  ],
+  hamstrings: [
+    { name: "Romanian Deadlift", equipment: "barbell" },
+    { name: "Leg Curl", equipment: "barbell" },
+    { name: "Good Morning", equipment: "barbell" },
+  ],
+  glutes: [
+    { name: "Hip Thrust", equipment: "barbell" },
+    { name: "Glute Bridge", equipment: "bodyweight" },
+    { name: "Cable Kickback", equipment: "band" },
+  ],
+  calves: [
+    { name: "Standing Calf Raise", equipment: "barbell" },
+    { name: "Seated Calf Raise", equipment: "barbell" },
+  ],
+  core: [
+    { name: "Plank", equipment: "bodyweight" },
+    { name: "Hanging Leg Raise", equipment: "bodyweight" },
+    { name: "Cable Crunch", equipment: "barbell" },
+    { name: "Russian Twist", equipment: "bodyweight" },
+  ],
+};
+
+export const EQUIPMENT_LABELS: Record<EquipmentType, string> = {
+  barbell: "Barbell",
+  dumbbell: "Dumbbell",
+  bodyweight: "Bodyweight",
+  band: "Resistance band",
+  cardio: "Cardio",
 };
 
 export function buildDefaultExercises(): Exercise[] {
   const list: Exercise[] = [];
   (Object.keys(defaultExerciseNames) as MuscleGroupId[]).forEach((mg) => {
-    defaultExerciseNames[mg].forEach((name) => {
-      list.push({ id: makeId("ex"), name, muscleGroup: mg });
+    defaultExerciseNames[mg].forEach(({ name, equipment }) => {
+      list.push({ id: makeId("ex"), name, muscleGroup: mg, equipment });
     });
   });
   return list;

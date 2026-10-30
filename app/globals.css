@@ -4,12 +4,39 @@
 
 :root {
   color-scheme: dark;
+
+  --base-50: 244 247 245;
+  --base-100: 231 242 236;
+  --base-200: 201 214 208;
+  --base-300: 167 184 176;
+  --base-400: 124 144 136;
+  --base-500: 95 116 107;
+  --base-600: 60 74 66;
+  --base-700: 29 38 33;
+  --base-800: 21 27 24;
+  --base-900: 15 20 18;
+  --base-950: 10 13 12;
+
+  --accent-50: 234 255 245;
+  --accent-100: 200 255 227;
+  --accent-200: 147 255 201;
+  --accent-300: 92 247 170;
+  --accent-400: 57 233 145;
+  --accent-500: 31 201 116;
+  --accent-600: 21 159 90;
+  --accent-700: 18 124 71;
+  --accent-800: 18 97 57;
+  --accent-900: 17 79 48;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 html,
 body {
-  background-color: #0a0d0c;
-  color: #e7f2ec;
+  background-color: rgb(var(--base-950));
+  color: rgb(var(--base-100));
 }
 
 * {
@@ -17,7 +44,7 @@ body {
 }
 
 ::selection {
-  background: rgba(57, 233, 145, 0.35);
+  background: rgb(var(--accent-400) / 0.35);
 }
 
 ::-webkit-scrollbar {
@@ -28,11 +55,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a352e;
+  background: rgb(var(--base-700));
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3c4a42;
+  background: rgb(var(--base-600));
 }
 
 input[type="number"]::-webkit-outer-spin-button,

@@ -60,6 +60,7 @@ export function buildScheduleFromDaySequence(
         exerciseId,
         muscleGroup: e.muscleGroup,
         targetSets: e.setsPerExercise,
+        targetWarmupSets: e.warmupSets,
       }))
     );
 
@@ -67,6 +68,15 @@ export function buildScheduleFromDaySequence(
   });
 
   return schedule;
+}
+
+export interface PushDayResult {
+  daySequence: DaySlot[];
+  /** Length of the span that was rotated — 2+ for a normal swap-with-a-later
+   * rest-day, or 1 if no rest day was found and a new one was inserted
+   * (sequence grew by one day). 0 means the push was a no-op (bad index).
+   * Needed by undoPushDayInSequence to invert this exact push later. */
+  length: number;
 }
 
 /**
@@ -77,8 +87,8 @@ export function buildScheduleFromDaySequence(
  * exists between today and the end, the whole remainder shifts and the
  * sequence grows by one day.
  */
-export function pushDayInSequence(daySequence: DaySlot[], index: number): DaySlot[] {
-  if (index < 0 || index >= daySequence.length) return daySequence;
+export function pushDayInSequence(daySequence: DaySlot[], index: number): PushDayResult {
+  if (index < 0 || index >= daySequence.length) return { daySequence, length: 0 };
 
   let restIndex = -1;
   for (let j = index + 1; j < daySequence.length; j++) {
@@ -89,10 +99,34 @@ export function pushDayInSequence(daySequence: DaySlot[], index: number): DaySlo
   }
 
   if (restIndex === -1) {
-    return [...daySequence.slice(0, index), [], ...daySequence.slice(index)];
+    return {
+      daySequence: [...daySequence.slice(0, index), [], ...daySequence.slice(index)],
+      length: 1,
+    };
   }
 
   const span = daySequence.slice(index, restIndex + 1); // ends with the rest day
   const rotated = [span[span.length - 1], ...span.slice(0, span.length - 1)];
-  return [...daySequence.slice(0, index), ...rotated, ...daySequence.slice(restIndex + 1)];
+  return {
+    daySequence: [...daySequence.slice(0, index), ...rotated, ...daySequence.slice(restIndex + 1)],
+    length: span.length,
+  };
+}
+
+/** Inverts a previous pushDayInSequence(daySequence, index) call, given the
+ * `length` it returned. */
+export function undoPushDayInSequence(
+  daySequence: DaySlot[],
+  index: number,
+  length: number
+): DaySlot[] {
+  if (index < 0 || length <= 0 || index + length > daySequence.length) return daySequence;
+
+  if (length === 1) {
+    return [...daySequence.slice(0, index), ...daySequence.slice(index + 1)];
+  }
+
+  const span = daySequence.slice(index, index + length);
+  const restored = [...span.slice(1), span[0]];
+  return [...daySequence.slice(0, index), ...restored, ...daySequence.slice(index + length)];
 }

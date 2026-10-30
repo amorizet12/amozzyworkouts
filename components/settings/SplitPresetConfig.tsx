@@ -42,7 +42,7 @@ export default function SplitPresetConfig({
 
   const toggleExercise = (mg: MuscleGroupId, exerciseId: string) => {
     onSelectionsChange((prev) => {
-      const current = prev[mg] ?? { exerciseIds: [], setsPerExercise: 3 };
+      const current = prev[mg] ?? { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
       const has = current.exerciseIds.includes(exerciseId);
       return {
         ...prev,
@@ -58,10 +58,20 @@ export default function SplitPresetConfig({
 
   const changeSets = (mg: MuscleGroupId, delta: number) => {
     onSelectionsChange((prev) => {
-      const current = prev[mg] ?? { exerciseIds: [], setsPerExercise: 3 };
+      const current = prev[mg] ?? { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
       return {
         ...prev,
         [mg]: { ...current, setsPerExercise: Math.min(10, Math.max(1, current.setsPerExercise + delta)) },
+      };
+    });
+  };
+
+  const changeWarmup = (mg: MuscleGroupId, delta: number) => {
+    onSelectionsChange((prev) => {
+      const current = prev[mg] ?? { exerciseIds: [], setsPerExercise: 3, warmupSets: 1 };
+      return {
+        ...prev,
+        [mg]: { ...current, warmupSets: Math.min(5, Math.max(0, current.warmupSets + delta)) },
       };
     });
   };
@@ -121,8 +131,10 @@ export default function SplitPresetConfig({
               exercises={exercises}
               exerciseIds={selections[mg]?.exerciseIds ?? []}
               setsPerExercise={selections[mg]?.setsPerExercise ?? 3}
+              warmupSets={selections[mg]?.warmupSets ?? 1}
               onToggleExercise={(exerciseId) => toggleExercise(mg, exerciseId)}
               onSetsChange={(delta) => changeSets(mg, delta)}
+              onWarmupChange={(delta) => changeWarmup(mg, delta)}
             />
           ))}
         </div>

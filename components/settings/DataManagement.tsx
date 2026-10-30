@@ -35,7 +35,7 @@ export default function DataManagement() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `amozzy-workouts-backup-${format(new Date(), "yyyy-MM-dd")}.json`;
+    a.download = `prism-backup-${format(new Date(), "yyyy-MM-dd")}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -219,7 +219,7 @@ export default function DataManagement() {
       <section className="rounded-xl border border-base-700/60 bg-base-900/40 p-4">
         <p className="text-[13.5px] font-semibold text-base-100">App updates</p>
         <p className="mt-0.5 text-[12px] text-base-500">
-          Installed as an app, Amozzy can hang on to an older cached version. Tap this after a new
+          Installed as an app, PRISM can hang on to an older cached version. Tap this after a new
           deployment to force-fetch the latest one.
         </p>
         <button

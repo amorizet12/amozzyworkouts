@@ -10,7 +10,7 @@ import { SPLIT_PRESET_TYPES } from "@/lib/splitPresets";
 import PlanWeekView from "./PlanWeekView";
 import SplitPresetConfig from "./SplitPresetConfig";
 import CustomSplitConfig from "./CustomSplitConfig";
-import { GroupSelections, groupSelectionsToDaySlot } from "./planBuilderTypes";
+import { GroupSelections, daySlotCounts, groupSelectionsToDaySlot } from "./planBuilderTypes";
 
 const SPLIT_OPTIONS: { id: SplitStyle; label: string; description: string; icon: typeof Dumbbell }[] = [
   { id: "ppl", label: "Push / Pull / Legs", description: "Classic 3-way rotation", icon: Dumbbell },
@@ -54,7 +54,11 @@ export default function PlanBuilder() {
           .map((mg) => ({
             muscleGroup: mg,
             exerciseIds: presetSelections[mg]?.exerciseIds ?? [],
-            setsPerExercise: presetSelections[mg]?.setsPerExercise ?? 3,
+            ...daySlotCounts(
+              mg,
+              presetSelections[mg]?.setsPerExercise ?? 3,
+              presetSelections[mg]?.warmupSets ?? 1
+            ),
           }))
           .filter((e) => e.exerciseIds.length > 0)
       );

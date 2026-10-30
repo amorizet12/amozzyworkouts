@@ -11,16 +11,24 @@ export interface SplitType {
  * continuous cycle (see lib/schedule.ts). */
 export const SPLIT_PRESET_TYPES: Record<"ppl" | "upper_lower", SplitType[]> = {
   ppl: [
-    { id: "push", label: "Push", muscleGroups: ["chest", "shoulders", "triceps"] },
-    { id: "pull", label: "Pull", muscleGroups: ["back", "biceps"] },
-    { id: "legs", label: "Legs", muscleGroups: ["quads", "hamstrings", "glutes", "calves"] },
+    { id: "push", label: "Push", muscleGroups: ["chest", "shoulders", "triceps", "cardio"] },
+    { id: "pull", label: "Pull", muscleGroups: ["back", "biceps", "cardio"] },
+    {
+      id: "legs",
+      label: "Legs",
+      muscleGroups: ["quads", "hamstrings", "glutes", "calves", "cardio"],
+    },
   ],
   upper_lower: [
     {
       id: "upper",
       label: "Upper",
-      muscleGroups: ["chest", "back", "shoulders", "biceps", "triceps"],
+      muscleGroups: ["chest", "back", "shoulders", "biceps", "triceps", "cardio"],
     },
-    { id: "lower", label: "Lower", muscleGroups: ["quads", "hamstrings", "glutes", "calves"] },
+    {
+      id: "lower",
+      label: "Lower",
+      muscleGroups: ["quads", "hamstrings", "glutes", "calves", "cardio"],
+    },
   ],
 };
