@@ -41,7 +41,12 @@ export default function RootLayout({
       <body className="min-h-screen bg-base-950 font-sans antialiased">
         <div className="mx-auto flex min-h-screen max-w-3xl flex-col">
           <NavBar />
-          <main className="flex-1 px-4 pb-24 pt-4 sm:px-6">{children}</main>
+          <main
+            className="flex-1 px-4 pt-4 sm:px-6"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 7rem)" }}
+          >
+            {children}
+          </main>
         </div>
         <BottomNav />
         <ServiceWorkerRegister />
